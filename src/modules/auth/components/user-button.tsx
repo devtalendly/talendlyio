@@ -1,11 +1,13 @@
 'use client';
 
 import { LogOutIcon, SettingsIcon } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
-import Link from 'next/link';
 
+import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,8 +18,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOut, useSession } from '@/lib/auth-client';
-import { Button } from '@/components/ui/button';
-import { ThemeSwitcher } from '@/components/theme-switcher';
 
 function getInitials(name: string): string {
   return name
@@ -67,15 +67,15 @@ export function UserButton() {
         </Avatar>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
         <div className="flex items-center gap-2.5 px-2 py-1.5">
           <Avatar>
             {image && <AvatarImage src={image} alt={name} />}
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-medium">{name}</span>
-            <span className="text-muted-foreground truncate text-xs">
+            <span className="truncate font-medium">{name}</span>
+            <span className="text-muted-foreground truncate text-sm">
               {email}
             </span>
           </div>
@@ -96,18 +96,12 @@ export function UserButton() {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Appearance</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            Theme
-            <ThemeSwitcher className="ml-auto" />
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+        <div className="flex items-center gap-2 px-1.5 py-1 text-sm">
+          <span>Theme</span>
+          <ThemeSwitcher className="ml-auto" />
+        </div>
+
+        <DropdownMenuSeparator />
 
         <DropdownMenuItem
           variant="destructive"

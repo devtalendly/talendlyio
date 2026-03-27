@@ -7,12 +7,18 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export const ThemeSwitcher = ({ className }: React.ComponentProps<'div'>) => {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
+
+  const activeTheme = theme ?? 'system';
+
+  function handleThemeChange(nextTheme: 'system' | 'light' | 'dark') {
+    setTheme(nextTheme);
+  }
 
   return (
     <div
       className={cn(
-        'ring-border relative isolate flex h-8 rounded-full p-1 ring-1',
+        'bg-background ring-border relative isolate flex items-center rounded-full p-0.5 ring-1',
         className,
       )}
     >
@@ -21,36 +27,39 @@ export const ThemeSwitcher = ({ className }: React.ComponentProps<'div'>) => {
         size="icon-xs"
         aria-label="System theme"
         className={cn(
-          'hover:border-accent-foreground relative rounded-full',
-          resolvedTheme === 'system' && 'border-accent',
+          'text-muted-foreground hover:text-foreground relative rounded-full',
+          activeTheme === 'system' &&
+            'border-border bg-muted text-foreground hover:bg-muted hover:text-foreground',
         )}
-        onClick={() => setTheme('system')}
+        onClick={() => handleThemeChange('system')}
       >
-        <MonitorIcon className="text-accent-foreground relative z-10 m-auto size-4" />
+        <MonitorIcon className="relative z-10 m-auto" />
       </Button>
       <Button
         variant="ghost"
         size="icon-xs"
         aria-label="Light theme"
         className={cn(
-          'hover:border-accent-foreground relative rounded-full',
-          resolvedTheme === 'light' && 'border-accent',
+          'text-muted-foreground hover:text-foreground relative rounded-full',
+          activeTheme === 'light' &&
+            'border-border bg-muted text-foreground hover:bg-muted hover:text-foreground',
         )}
-        onClick={() => setTheme('light')}
+        onClick={() => handleThemeChange('light')}
       >
-        <SunIcon className="text-accent-foreground relative z-10 m-auto size-4" />
+        <SunIcon className="relative z-10 m-auto" />
       </Button>
       <Button
         variant="ghost"
         size="icon-xs"
         aria-label="Dark theme"
         className={cn(
-          'hover:border-accent-foreground relative rounded-full',
-          resolvedTheme === 'dark' && 'border-accent',
+          'text-muted-foreground hover:text-foreground relative rounded-full',
+          activeTheme === 'dark' &&
+            'border-border bg-muted text-foreground hover:bg-muted hover:text-foreground',
         )}
-        onClick={() => setTheme('dark')}
+        onClick={() => handleThemeChange('dark')}
       >
-        <MoonIcon className="text-accent-foreground relative z-10 m-auto size-4" />
+        <MoonIcon className="relative z-10 m-auto" />
       </Button>
     </div>
   );
