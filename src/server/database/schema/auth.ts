@@ -16,6 +16,10 @@ export const users = pgTable(
     email: text('email').notNull().unique(),
     emailVerified: boolean('email_verified').default(false).notNull(),
     image: text('image'),
+    role: text('role'),
+    banned: boolean('banned').default(false),
+    banReason: text('ban_reason'),
+    banExpires: timestamp('ban_expires'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -31,16 +35,17 @@ export const sessions = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     expiresAt: timestamp('expires_at').notNull(),
     token: text('token').notNull().unique(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at')
-      .$onUpdate(() => new Date())
-      .notNull(),
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    impersonatedBy: text('impersonated_by'),
     activeOrganizationId: text('active_organization_id'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .$onUpdate(() => new Date())
+      .notNull(),
   },
   (table) => [index('session_user_id_idx').on(table.userId)],
 );
