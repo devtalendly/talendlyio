@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOut, useSession } from '@/lib/auth-client';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 function getInitials(name: string): string {
   return name
@@ -26,11 +28,18 @@ function getInitials(name: string): string {
 }
 
 export function UserButton() {
-  const { data: session } = useSession();
+  const { data: session, isPending: isSessionPending } = useSession();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  if (!session?.user) return null;
+  if (isSessionPending || !session?.user) {
+    return (
+      <Button
+        render={<Link href="/sign-in">Sign in</Link>}
+        nativeButton={false}
+      />
+    );
+  }
 
   const { name, email, image } = session.user;
   const initials = getInitials(name);

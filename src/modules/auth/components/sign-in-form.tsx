@@ -3,6 +3,7 @@
 import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -34,19 +35,19 @@ export function SignInForm(props: React.ComponentProps<typeof Card>) {
   const form = useForm({
     ...signInFormOptions,
     validators: { onSubmit: SignInFormSchema },
-    async onSubmit({ value }) {
+    async onSubmit({ value, formApi }) {
       const { error } = await signIn.email({
         email: value.email,
         password: value.password,
         callbackURL: '/',
       });
       if (error) {
-        // TODO: Handle error (e.g., show a toast notification)
-        alert(
+        toast.error(
           error.message ??
             'An error occurred while signing in. Please try again.',
         );
       } else {
+        formApi.reset();
         router.push('/');
       }
     },

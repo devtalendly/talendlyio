@@ -3,6 +3,7 @@
 import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -37,18 +38,18 @@ export function ForgotPasswordForm(props: React.ComponentProps<typeof Card>) {
   const form = useForm({
     ...forgotPasswordFormOptions,
     validators: { onSubmit: ForgotPasswordFormSchema },
-    async onSubmit({ value }) {
+    async onSubmit({ value, formApi }) {
       const { error } = await authClient.emailOtp.sendVerificationOtp({
         email: value.email,
         type: 'forget-password',
       });
       if (error) {
-        // TODO: Handle error (e.g., show a toast notification)
-        alert(
+        toast.error(
           error.message ??
             'An error occurred while sending the reset code. Please try again.',
         );
       } else {
+        formApi.reset();
         router.push(`/reset-password?email=${encodeURIComponent(value.email)}`);
       }
     },

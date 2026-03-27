@@ -3,6 +3,7 @@
 import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +35,7 @@ export function SignUpForm(props: React.ComponentProps<typeof Card>) {
   const form = useForm({
     ...signUpFormOptions,
     validators: { onSubmit: SignUpFormSchema },
-    async onSubmit({ value }) {
+    async onSubmit({ value, formApi }) {
       const { error } = await signUp.email({
         name: value.name,
         email: value.email,
@@ -42,12 +43,12 @@ export function SignUpForm(props: React.ComponentProps<typeof Card>) {
         callbackURL: '/',
       });
       if (error) {
-        // TODO: Handle error (e.g., show a toast notification)
-        alert(
+        toast.error(
           error.message ??
             'An error occurred while creating your account. Please try again.',
         );
       } else {
+        formApi.reset();
         router.push(`/verify-email?email=${encodeURIComponent(value.email)}`);
       }
     },

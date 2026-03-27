@@ -12,7 +12,7 @@ export function ResendOtpButton({
   className,
   onClick,
   ...props
-}: React.ComponentProps<'button'> & {
+}: Omit<React.ComponentProps<'button'>, 'onError'> & {
   email: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;

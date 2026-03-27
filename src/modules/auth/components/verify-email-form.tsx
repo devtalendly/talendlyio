@@ -4,6 +4,7 @@ import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -37,28 +38,32 @@ import { ResendOtpButton } from './resend-otp-button';
 export function VerifyEmailForm(props: React.ComponentProps<typeof Card>) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const email = searchParams.get('email') ?? '';
+
   const [resendSuccess, setResendSuccess] = useState(false);
   const form = useForm({
     ...verifyEmailFormOptions,
+    defaultValues: {
+      ...verifyEmailFormOptions.defaultValues,
+      email,
+    },
     validators: { onSubmit: VerifyEmailFormSchema },
-    async onSubmit({ value }) {
+    async onSubmit({ value, formApi }) {
       const { error } = await authClient.emailOtp.verifyEmail({
         email: value.email,
         otp: value.otp,
       });
       if (error) {
-        // TODO: Handle error (e.g., show a toast notification)
-        alert(
+        toast.error(
           error.message ??
             'An error occurred while verifying your email. Please try again.',
         );
       } else {
+        formApi.reset();
         router.push('/');
       }
     },
   });
-
-  const email = searchParams.get('email') ?? '';
 
   return (
     <Card {...props}>
@@ -80,7 +85,12 @@ export function VerifyEmailForm(props: React.ComponentProps<typeof Card>) {
         >
           <form.Field name="email">
             {(field) => (
-              <Input type="hidden" name={field.name} value={email} readOnly />
+              <Input
+                type="hidden"
+                name={field.name}
+                defaultValue={email}
+                readOnly
+              />
             )}
           </form.Field>
           <FieldGroup>
@@ -134,6 +144,7 @@ export function VerifyEmailForm(props: React.ComponentProps<typeof Card>) {
           <ResendOtpButton
             email={email}
             onSuccess={() => setResendSuccess(true)}
+            onError={(err) => toast.error(err)}
           />
           {resendSuccess && (
             <span className="text-muted-foreground"> — sent!</span>

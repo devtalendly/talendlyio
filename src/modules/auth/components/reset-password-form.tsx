@@ -4,6 +4,7 @@ import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -37,29 +38,33 @@ import { ResendOtpButton } from './resend-otp-button';
 export function ResetPasswordForm(props: React.ComponentProps<typeof Card>) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const email = searchParams.get('email') ?? '';
+
   const [resendSuccess, setResendSuccess] = useState(false);
   const form = useForm({
     ...resetPasswordFormOptions,
+    defaultValues: {
+      ...resetPasswordFormOptions.defaultValues,
+      email,
+    },
     validators: { onSubmit: ResetPasswordFormSchema },
-    async onSubmit({ value }) {
+    async onSubmit({ value, formApi }) {
       const { error } = await authClient.emailOtp.resetPassword({
         email: value.email,
         otp: value.otp,
         password: value.newPassword,
       });
       if (error) {
-        // TODO: Handle error (e.g., show a toast notification)
-        alert(
+        toast.error(
           error.message ??
             'An error occurred while resetting your password. The code may have expired.',
         );
       } else {
+        formApi.reset();
         router.push('/sign-in');
       }
     },
   });
-
-  const email = searchParams.get('email') ?? '';
 
   return (
     <Card {...props}>
@@ -181,6 +186,7 @@ export function ResetPasswordForm(props: React.ComponentProps<typeof Card>) {
           <ResendOtpButton
             email={email}
             onSuccess={() => setResendSuccess(true)}
+            onError={(err) => toast.error(err)}
           />
           {resendSuccess && (
             <span className="text-muted-foreground"> — sent!</span>
