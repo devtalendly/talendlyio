@@ -1,8 +1,9 @@
 'use client';
 
+import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useId, useState, useTransition } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -20,42 +21,44 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  getFieldErrorId,
+  getFieldId,
+  getInputProps,
+  isInvalid,
+} from '@/internals/form/props';
 import { authClient } from '@/lib/auth-client';
+import {
+  VerifyEmailFormSchema,
+  verifyEmailFormOptions,
+} from '@/modules/auth/schemas';
+import { ResendOtpButton } from './resend-otp-button';
 
 export function VerifyEmailForm(props: React.ComponentProps<typeof Card>) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email') ?? '';
-  const formId = useId();
-  const [otp, setOtp] = useState('');
-  const [error, setError] = useState('');
   const [resendSuccess, setResendSuccess] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [isResendPending, startResendTransition] = useTransition();
-
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError('');
-    startTransition(async () => {
-      const { error } = await authClient.emailOtp.verifyEmail({ email, otp });
-      if (error) {
-        setError(error.message ?? 'Invalid code. Please try again.');
-      } else {
-        router.push('/dashboard');
-      }
-    });
-  }
-
-  function handleResend() {
-    setResendSuccess(false);
-    startResendTransition(async () => {
-      await authClient.emailOtp.sendVerificationOtp({
-        email,
-        type: 'email-verification',
+  const form = useForm({
+    ...verifyEmailFormOptions,
+    validators: { onSubmit: VerifyEmailFormSchema },
+    async onSubmit({ value }) {
+      const { error } = await authClient.emailOtp.verifyEmail({
+        email: value.email,
+        otp: value.otp,
       });
-      setResendSuccess(true);
-    });
-  }
+      if (error) {
+        // TODO: Handle error (e.g., show a toast notification)
+        alert(
+          error.message ??
+            'An error occurred while verifying your email. Please try again.',
+        );
+      } else {
+        router.push('/');
+      }
+    },
+  });
+
+  const email = searchParams.get('email') ?? '';
 
   return (
     <Card {...props}>
@@ -67,47 +70,71 @@ export function VerifyEmailForm(props: React.ComponentProps<typeof Card>) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form id={formId} onSubmit={handleSubmit}>
+        <form
+          id={form.formId}
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit(e);
+          }}
+        >
+          <form.Field name="email">
+            {(field) => (
+              <Input type="hidden" name={field.name} value={email} readOnly />
+            )}
+          </form.Field>
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-otp`}>
-                Verification code
-              </FieldLabel>
-              <Input
-                id={`${formId}-otp`}
-                type="text"
-                inputMode="numeric"
-                placeholder="123456"
-                autoComplete="one-time-code"
-                maxLength={6}
-                required
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              />
-            </Field>
-            {error && <FieldError>{error}</FieldError>}
+            <form.Field name="otp">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>
+                    Verification code
+                  </FieldLabel>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="123456"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    required
+                    {...getInputProps(field)}
+                    onChange={(e) =>
+                      field.handleChange(e.target.value.replace(/\D/g, ''))
+                    }
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
+              {([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  {isSubmitting ? 'Verifying…' : 'Verify email'}
+                </Button>
+              )}
+            </form.Subscribe>
           </FieldGroup>
         </form>
       </CardContent>
       <CardFooter className="flex-col gap-3">
-        <Button
-          type="submit"
-          form={formId}
-          className="w-full"
-          disabled={isPending || !email}
-        >
-          {isPending ? 'Verifying…' : 'Verify email'}
-        </Button>
         <p className="text-muted-foreground text-sm">
           Didn&apos;t receive a code?{' '}
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={isResendPending}
-            className="text-foreground hover:underline disabled:opacity-50"
-          >
-            {isResendPending ? 'Sending…' : 'Resend'}
-          </button>
+          <ResendOtpButton
+            email={email}
+            onSuccess={() => setResendSuccess(true)}
+          />
           {resendSuccess && (
             <span className="text-muted-foreground"> — sent!</span>
           )}

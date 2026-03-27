@@ -9,3 +9,7 @@ if (!connectionString) {
 }
 
 export const db = connectToDatabase(connectionString);
+
+export function getDatabase() {
+  return db;
+}

@@ -1,8 +1,8 @@
 'use client';
 
+import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -20,34 +20,38 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  getFieldErrorId,
+  getFieldId,
+  getInputProps,
+  isInvalid,
+} from '@/internals/form/props';
 import { signUp } from '@/lib/auth-client';
+import { SignUpFormSchema, signUpFormOptions } from '@/modules/auth/schemas';
 
 export function SignUpForm(props: React.ComponentProps<typeof Card>) {
   const router = useRouter();
-  const formId = useId();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isPending, startTransition] = useTransition();
-
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError('');
-    startTransition(async () => {
+  const form = useForm({
+    ...signUpFormOptions,
+    validators: { onSubmit: SignUpFormSchema },
+    async onSubmit({ value }) {
       const { error } = await signUp.email({
-        name,
-        email,
-        password,
+        name: value.name,
+        email: value.email,
+        password: value.password,
         callbackURL: '/',
       });
       if (error) {
-        setError(error.message ?? 'Sign up failed. Please try again.');
+        // TODO: Handle error (e.g., show a toast notification)
+        alert(
+          error.message ??
+            'An error occurred while creating your account. Please try again.',
+        );
       } else {
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        router.push(`/verify-email?email=${encodeURIComponent(value.email)}`);
       }
-    });
-  }
+    },
+  });
 
   return (
     <Card {...props}>
@@ -58,58 +62,93 @@ export function SignUpForm(props: React.ComponentProps<typeof Card>) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form id={formId} onSubmit={handleSubmit}>
+        <form
+          id={form.formId}
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit(e);
+          }}
+        >
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-name`}>Name</FieldLabel>
-              <Input
-                id={`${formId}-name`}
-                type="text"
-                placeholder="Jane Doe"
-                autoComplete="name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-email`}>Email</FieldLabel>
-              <Input
-                id={`${formId}-email`}
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-password`}>Password</FieldLabel>
-              <Input
-                id={`${formId}-password`}
-                type="password"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
-            {error && <FieldError>{error}</FieldError>}
+            <form.Field name="name">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>Name</FieldLabel>
+                  <Input
+                    type="text"
+                    placeholder="Jane Doe"
+                    autoComplete="name"
+                    required
+                    {...getInputProps(field)}
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="email">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>Email</FieldLabel>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    required
+                    {...getInputProps(field)}
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="password">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>Password</FieldLabel>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    required
+                    {...getInputProps(field)}
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
+              {([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  {isSubmitting ? 'Creating account…' : 'Create account'}
+                </Button>
+              )}
+            </form.Subscribe>
           </FieldGroup>
         </form>
       </CardContent>
-      <CardFooter className="flex-col gap-3">
-        <Button
-          type="submit"
-          form={formId}
-          className="w-full"
-          disabled={isPending}
-        >
-          {isPending ? 'Creating account…' : 'Create account'}
-        </Button>
+      <CardFooter>
         <p className="text-muted-foreground text-sm">
           Already have an account?{' '}
           <Link href="/sign-in" className="text-foreground hover:underline">

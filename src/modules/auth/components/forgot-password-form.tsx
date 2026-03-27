@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState, useTransition } from 'react';
+import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -20,30 +20,39 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  getFieldErrorId,
+  getFieldId,
+  getInputProps,
+  isInvalid,
+} from '@/internals/form/props';
 import { authClient } from '@/lib/auth-client';
+import {
+  ForgotPasswordFormSchema,
+  forgotPasswordFormOptions,
+} from '@/modules/auth/schemas';
 
 export function ForgotPasswordForm(props: React.ComponentProps<typeof Card>) {
   const router = useRouter();
-  const formId = useId();
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [isPending, startTransition] = useTransition();
-
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError('');
-    startTransition(async () => {
+  const form = useForm({
+    ...forgotPasswordFormOptions,
+    validators: { onSubmit: ForgotPasswordFormSchema },
+    async onSubmit({ value }) {
       const { error } = await authClient.emailOtp.sendVerificationOtp({
-        email,
+        email: value.email,
         type: 'forget-password',
       });
       if (error) {
-        setError(error.message ?? 'Something went wrong. Please try again.');
+        // TODO: Handle error (e.g., show a toast notification)
+        alert(
+          error.message ??
+            'An error occurred while sending the reset code. Please try again.',
+        );
       } else {
-        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+        router.push(`/reset-password?email=${encodeURIComponent(value.email)}`);
       }
-    });
-  }
+    },
+  });
 
   return (
     <Card {...props}>
@@ -54,33 +63,53 @@ export function ForgotPasswordForm(props: React.ComponentProps<typeof Card>) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form id={formId} onSubmit={handleSubmit}>
+        <form
+          id={form.formId}
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit(e);
+          }}
+        >
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-email`}>Email</FieldLabel>
-              <Input
-                id={`${formId}-email`}
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </Field>
-            {error && <FieldError>{error}</FieldError>}
+            <form.Field name="email">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>Email</FieldLabel>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    required
+                    {...getInputProps(field)}
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
+              {([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  {isSubmitting ? 'Sending…' : 'Send reset code'}
+                </Button>
+              )}
+            </form.Subscribe>
           </FieldGroup>
         </form>
       </CardContent>
-      <CardFooter className="flex-col gap-3">
-        <Button
-          type="submit"
-          form={formId}
-          className="w-full"
-          disabled={isPending}
-        >
-          {isPending ? 'Sending…' : 'Send reset code'}
-        </Button>
+      <CardFooter>
         <Link
           href="/sign-in"
           className="text-muted-foreground hover:text-foreground text-sm"

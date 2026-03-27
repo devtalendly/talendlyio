@@ -1,8 +1,9 @@
 'use client';
 
+import { useForm } from '@tanstack/react-form';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useId, useState, useTransition } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -20,43 +21,45 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  getFieldErrorId,
+  getFieldId,
+  getInputProps,
+  isInvalid,
+} from '@/internals/form/props';
 import { authClient } from '@/lib/auth-client';
+import {
+  ResetPasswordFormSchema,
+  resetPasswordFormOptions,
+} from '@/modules/auth/schemas';
+import { ResendOtpButton } from './resend-otp-button';
 
 export function ResetPasswordForm(props: React.ComponentProps<typeof Card>) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email') ?? '';
-  const formId = useId();
-  const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
-  const [isPending, startTransition] = useTransition();
-
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError('');
-    if (password !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (!email) {
-      setError('Missing email. Please restart the reset flow.');
-      return;
-    }
-    startTransition(async () => {
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const form = useForm({
+    ...resetPasswordFormOptions,
+    validators: { onSubmit: ResetPasswordFormSchema },
+    async onSubmit({ value }) {
       const { error } = await authClient.emailOtp.resetPassword({
-        email,
-        otp,
-        password,
+        email: value.email,
+        otp: value.otp,
+        password: value.newPassword,
       });
       if (error) {
-        setError(error.message ?? 'Reset failed. The code may have expired.');
+        // TODO: Handle error (e.g., show a toast notification)
+        alert(
+          error.message ??
+            'An error occurred while resetting your password. The code may have expired.',
+        );
       } else {
         router.push('/sign-in');
       }
-    });
-  }
+    },
+  });
+
+  const email = searchParams.get('email') ?? '';
 
   return (
     <Card {...props}>
@@ -68,70 +71,126 @@ export function ResetPasswordForm(props: React.ComponentProps<typeof Card>) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form id={formId} onSubmit={handleSubmit}>
+        <form
+          id={form.formId}
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit(e);
+          }}
+        >
+          <form.Field name="email">
+            {(field) => (
+              <Input type="hidden" name={field.name} value={email} readOnly />
+            )}
+          </form.Field>
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-otp`}>Reset code</FieldLabel>
-              <Input
-                id={`${formId}-otp`}
-                type="text"
-                inputMode="numeric"
-                placeholder="123456"
-                autoComplete="one-time-code"
-                maxLength={6}
-                required
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-password`}>
-                New password
-              </FieldLabel>
-              <Input
-                id={`${formId}-password`}
-                type="password"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${formId}-confirm`}>
-                Confirm password
-              </FieldLabel>
-              <Input
-                id={`${formId}-confirm`}
-                type="password"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-              />
-            </Field>
-            {error && <FieldError>{error}</FieldError>}
+            <form.Field name="otp">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>
+                    Reset code
+                  </FieldLabel>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="123456"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    required
+                    {...getInputProps(field)}
+                    onChange={(e) =>
+                      field.handleChange(e.target.value.replace(/\D/g, ''))
+                    }
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="newPassword">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>
+                    New Password
+                  </FieldLabel>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                    {...getInputProps(field)}
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="confirmPassword">
+              {(field) => (
+                <Field data-invalid={isInvalid(field)}>
+                  <FieldLabel htmlFor={getFieldId(field)}>
+                    Confirm password
+                  </FieldLabel>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                    {...getInputProps(field)}
+                  />
+                  {isInvalid(field) && (
+                    <FieldError
+                      id={getFieldErrorId(field)}
+                      errors={field.state.meta.errors}
+                    />
+                  )}
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+            >
+              {([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  {isSubmitting ? 'Resetting…' : 'Reset password'}
+                </Button>
+              )}
+            </form.Subscribe>
           </FieldGroup>
         </form>
       </CardContent>
-      <CardFooter className="flex-col gap-3">
-        <Button
-          type="submit"
-          form={formId}
-          className="w-full"
-          disabled={isPending || !email}
-        >
-          {isPending ? 'Resetting…' : 'Reset password'}
-        </Button>
+      <CardFooter>
+        <p className="text-muted-foreground text-sm">
+          Didn&apos;t receive a code?{' '}
+          <ResendOtpButton
+            email={email}
+            onSuccess={() => setResendSuccess(true)}
+          />
+          {resendSuccess && (
+            <span className="text-muted-foreground"> — sent!</span>
+          )}
+        </p>
         <Link
-          href="/forgot-password"
+          href="/sign-in"
           className="text-muted-foreground hover:text-foreground text-sm"
         >
-          Request a new code
+          Back to sign in
         </Link>
       </CardFooter>
     </Card>
