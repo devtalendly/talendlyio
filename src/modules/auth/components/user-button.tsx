@@ -3,6 +3,7 @@
 import { LogOutIcon, SettingsIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut, useSession } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 function getInitials(name: string): string {
   return name
@@ -94,6 +95,19 @@ export function UserButton() {
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            Theme
+            <ThemeSwitcher className="ml-auto" />
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
 
         <DropdownMenuItem
           variant="destructive"
