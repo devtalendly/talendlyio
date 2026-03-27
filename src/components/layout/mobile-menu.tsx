@@ -3,6 +3,7 @@
 import { MenuIcon } from 'lucide-react';
 import Link from 'next/link';
 
+import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -34,14 +35,8 @@ export function MobileMenu() {
       <SheetContent side="right" className="flex flex-col">
         <SheetHeader>
           <SheetTitle>
-            <Link
-              href="/"
-              className="text-foreground flex items-center gap-2 text-lg font-semibold tracking-tight"
-            >
-              <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">
-                T
-              </span>
-              Talendly
+            <Link href="/">
+              <Logo />
             </Link>
           </SheetTitle>
         </SheetHeader>
@@ -90,7 +85,7 @@ export function MobileMenu() {
             }
             nativeButton={false}
           >
-            Get Started
+            Get Started Free
           </SheetClose>
         </SheetFooter>
       </SheetContent>

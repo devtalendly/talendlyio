@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { MobileMenu } from './mobile-menu';
 import { Navbar } from './navbar';
@@ -8,14 +9,8 @@ export function Header() {
   return (
     <header className="border-border/50 bg-background/80 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <Link
-          href="/"
-          className="text-foreground flex items-center gap-2 text-lg font-semibold tracking-tight"
-        >
-          <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">
-            T
-          </span>
-          Talendly
+        <Link href="/">
+          <Logo />
         </Link>
 
         <Navbar className="hidden lg:flex" />
@@ -34,7 +29,7 @@ export function Header() {
             render={<Link href="/sign-up" />}
             nativeButton={false}
           >
-            Get Started
+            Get Started Free
           </Button>
         </div>
 
