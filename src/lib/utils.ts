@@ -20,13 +20,15 @@ export async function delay(ms: number) {
 }
 
 export function getURL(path: string = '') {
-  // Check if NEXT_PUBLIC_SITE_URL is set and non-empty. Set this to your site URL in production env.
+  // Prioritize Vercel's environment variable for the URL, which is automatically set in Vercel deployments.
+  const vercelURL =
+    env.NEXT_PUBLIC_VERCEL_BRANCH_URL || env.NEXT_PUBLIC_VERCEL_URL;
+
   let url =
-    env.NEXT_PUBLIC_SITE_URL && env.NEXT_PUBLIC_SITE_URL.trim() !== ''
-      ? env.NEXT_PUBLIC_SITE_URL
-      : // If not set, check for NEXT_PUBLIC_VERCEL_URL, which is automatically set by Vercel.
-        env.NEXT_PUBLIC_VERCEL_URL && env.NEXT_PUBLIC_VERCEL_URL.trim() !== ''
-        ? env.NEXT_PUBLIC_VERCEL_URL
+    vercelURL && vercelURL.trim() !== ''
+      ? vercelURL
+      : env.NEXT_PUBLIC_SITE_URL && env.NEXT_PUBLIC_SITE_URL.trim() !== ''
+        ? env.NEXT_PUBLIC_SITE_URL
         : // If neither is set, default to localhost for local development.
           `http://localhost:${process.env.PORT ?? 3000}`;
 
