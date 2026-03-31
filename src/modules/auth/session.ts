@@ -8,6 +8,11 @@ async function getSessionData() {
   return sessionData;
 }
 
+export const getAuth = cache(async () => {
+  const sessionData = await getSessionData();
+  return sessionData;
+});
+
 export const currentSession = cache(async () => {
   const sessionData = await getSessionData();
   return sessionData?.session ?? null;

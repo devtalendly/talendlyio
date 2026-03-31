@@ -10,21 +10,8 @@ import type {
   ActionOptions,
   ActionState,
   ActionType,
-  DefaultActionFn,
-  FormActionFn,
-  StateActionFn,
 } from './types';
 import { createValidationErrorFormState, toActionError } from './utils';
-
-// export function createAction<TSchema extends StandardSchemaV1, TOutput = void>(
-//   options: ActionOptions<TSchema, 'default', TOutput>,
-// ): DefaultActionFn<TSchema, TOutput>;
-// export function createAction<TSchema extends StandardSchemaV1, TOutput = void>(
-//   options: ActionOptions<TSchema, 'form-action', TOutput>,
-// ): FormActionFn<TSchema, TOutput>;
-// export function createAction<TSchema extends StandardSchemaV1, TOutput = void>(
-//   options: ActionOptions<TSchema, 'state-action', TOutput>,
-// ): StateActionFn<TSchema, TOutput>;
 
 export function createAction<
   TSchema extends StandardSchemaV1,

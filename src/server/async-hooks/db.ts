@@ -1,4 +1,4 @@
-import { getDatabase, type Database } from '@/lib/db';
+import { type Database } from '@/lib/db';
 import { __getTalendlyGlobal } from './global';
 import { getAsyncLocalStorage, type AsyncLocalStorage } from './index';
 
@@ -33,17 +33,21 @@ export async function getDatabaseFromContext(): Promise<DatabaseContext['db']> {
   });
 }
 
-export async function runWithDatabase<R>(fn: () => R | Promise<R>): Promise<R> {
+export async function runWithDatabase<R>(
+  db: Database,
+  fn: () => R | Promise<R>,
+): Promise<R> {
   return ensureAsyncStorage().then((als) => {
-    return als.run({ db: getDatabase() }, fn);
+    return als.run({ db }, fn);
   });
 }
 
 export async function runWithTransaction<R>(
+  db: Database,
   fn: () => R | Promise<R>,
 ): Promise<R> {
   return ensureAsyncStorage().then((als) => {
-    return getDatabase().transaction(async (trx) => {
+    return db.transaction(async (trx) => {
       return als.run({ db: trx }, fn);
     });
   });
