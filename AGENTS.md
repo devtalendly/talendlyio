@@ -39,6 +39,7 @@ Read the following guidelines carefully before writing any code. This document c
 - Server actions and route handlers should be created using the provided `createServerAction` and `createRouteHandler` wrappers respectively for consistent error handling and return types, unless the requirements of the action or endpoint dictate otherwise (e.g. Stripe webhooks must use raw body parsing).
 - Server actions and route handlers should utilize the async hooks-based database context for automatic connection management and transaction scoping. See `src/server/async-hooks/db.ts` for details.
 - Database access should be handled through `getDatabaseFromContext` when wrapped within `runWithDatabase` or `runWithTransaction`, never imported directly. This ensures proper connection management and transaction scoping.
+- Every domain (auth, candidates, employers, jobs, messaging, billing, etc.) should have a corresponding directory under `src/modules/` that encapsulates all business logic, database interactions, API calls, components, etc... for that domain. Server actions and route handlers should call into these services rather than directly accessing the database or implementing complex logic themselves.
 
 ---
 
@@ -50,7 +51,7 @@ Read the following guidelines carefully before writing any code. This document c
 - **`session`** — Better Auth managed
 - **`account`** — Better Auth managed (OAuth providers)
 - **`verification`** — Better Auth managed
-- **`user_profiles`** — 1:1 extension: role (`candidate`|`employer`|`admin`), locale (`el`|`en`), is_active, last_login_at
+- **`user_profiles`** — 1:1 extension: locale (`el`|`en`), is_active, last_login_at. Created automatically on signup with defaults. All authenticated users are candidates; there is no exclusive role. Employer access is determined by having a linked `employers` record. Admin status is managed by the Better Auth admin plugin via `users.role`.
 
 ### Candidates
 
@@ -79,7 +80,7 @@ Read the following guidelines carefully before writing any code. This document c
 
 ### Messaging
 
-- **`invitations`** — employer→candidate, optional job_post_id, message (≥50 chars), status (pending/accepted/declined/expired), expires after 14 days. Max 1 per candidate per 30 days.
+- **`employer_invitations`** — employer→candidate, optional job_post_id, message (≥50 chars), status (pending/accepted/declined/expired), expires after 14 days. Max 1 per candidate per 30 days. Named `employer_invitations` (not `invitations`) to avoid conflict with the Better Auth organization plugin's `invitations` table.
 - **`messages`** — thread_id groups conversations, sender_id, recipient_id, body, is_read. Only available after invitation accepted or profile unlocked + candidate consent.
 
 ### Jobs
@@ -110,12 +111,14 @@ Read the following guidelines carefully before writing any code. This document c
 
 ### Role-Based Access
 
-| Role        | Access                                        |
-| ----------- | --------------------------------------------- |
-| `admin`     | Full platform access                          |
-| `employer`  | Gated by verification_status + billing_status |
-| `candidate` | Standard authenticated access                 |
-| `public`    | Published job listings, landing pages         |
+Roles are **additive, not exclusive**. All authenticated users are candidates. A user can additionally become an employer — they do not stop being a candidate.
+
+| Access Level | Condition                                      | Access                                        |
+| ------------ | ---------------------------------------------- | --------------------------------------------- |
+| `admin`      | `users.role = 'admin'` (Better Auth managed)   | Full platform access                          |
+| `employer`   | Authenticated + has a linked `employers` record | Employer features gated by verification_status + billing_status; candidate access retained |
+| `candidate`  | Any authenticated user                         | Standard authenticated access                 |
+| `public`     | Unauthenticated                                | Published job listings, landing pages         |
 
 ### Employer Access Matrix
 
@@ -133,6 +136,8 @@ withAuth → withRole('employer') → withVerifiedEmployer → withCreditCheck('
 ```
 
 Available guards: `withAuth`, `withRole`, `withVerifiedEmployer`, `withAdmin`, `withRateLimit`, `withCreditCheck`
+
+> `withRole('employer')` checks for the existence of a linked `employers` record for the current user, not a role field on `user_profiles`.
 
 ---
 
@@ -231,7 +236,7 @@ Available guards: `withAuth`, `withRole`, `withVerifiedEmployer`, `withAdmin`, `
 | --------------------- | ------------------------------------------------ |
 | Daily 03:00 UTC       | Auto-hide profiles inactive 60+ days             |
 | Daily 03:00 UTC       | Email inactivity reminders at 45 days            |
-| Daily 04:00 UTC       | Expire invitations past expiry date              |
+| Daily 04:00 UTC       | Expire employer_invitations past expiry date     |
 | Daily 04:00 UTC       | Expire published job posts past expiry           |
 | Daily 05:00 UTC       | Prompt employer reactivation (90+ days inactive) |
 | Daily 06:00 UTC       | GDPR hard-delete (deleted_at > 30 days ago)      |

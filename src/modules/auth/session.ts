@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
+import { cache } from 'react';
 
 import { auth } from '@/lib/auth';
-import { cache } from 'react';
 
 async function getSessionData() {
   const sessionData = await auth.api.getSession({ headers: await headers() });

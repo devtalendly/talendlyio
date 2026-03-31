@@ -5,6 +5,8 @@ import { emailOTP, organization, admin } from 'better-auth/plugins';
 
 import { db } from '@/lib/db';
 import * as schema from '@/server/database/schema';
+import { runWithDatabase } from '@/server/async-hooks/db';
+import { createUserProfile } from '@/modules/users/services/user-profile.service';
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -41,6 +43,15 @@ export const auth = betterAuth({
     organization(),
     nextCookies(),
   ],
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await runWithDatabase(db, () => createUserProfile(user.id));
+        },
+      },
+    },
+  },
   advanced: {
     database: {
       generateId: false,

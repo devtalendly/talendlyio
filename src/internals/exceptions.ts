@@ -221,6 +221,18 @@ export class ConflictException extends AppException<'CONFLICT'> {
   }
 }
 
+export class UnprocessableEntityException extends AppException<'UNPROCESSABLE_ENTITY'> {
+  constructor(
+    message?: string,
+    options: InheritedExceptionOptions<'UNPROCESSABLE_ENTITY'> = {},
+  ) {
+    super('UNPROCESSABLE_ENTITY', {
+      ...options,
+      message,
+    });
+  }
+}
+
 export class TooManyRequestsException extends AppException<'TOO_MANY_REQUESTS'> {
   constructor(
     message?: string,
@@ -259,6 +271,7 @@ createException.Unauthorized = UnauthorizedException;
 createException.Forbidden = ForbiddenException;
 createException.NotFound = NotFoundException;
 createException.Conflict = ConflictException;
+createException.UnprocessableEntity = UnprocessableEntityException;
 createException.TooManyRequests = TooManyRequestsException;
 createException.InternalServerError = InternalServerErrorException;
 
