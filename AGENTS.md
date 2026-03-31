@@ -113,12 +113,12 @@ Read the following guidelines carefully before writing any code. This document c
 
 Roles are **additive, not exclusive**. All authenticated users are candidates. A user can additionally become an employer — they do not stop being a candidate.
 
-| Access Level | Condition                                      | Access                                        |
-| ------------ | ---------------------------------------------- | --------------------------------------------- |
-| `admin`      | `users.role = 'admin'` (Better Auth managed)   | Full platform access                          |
+| Access Level | Condition                                       | Access                                                                                     |
+| ------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `admin`      | `users.role = 'admin'` (Better Auth managed)    | Full platform access                                                                       |
 | `employer`   | Authenticated + has a linked `employers` record | Employer features gated by verification_status + billing_status; candidate access retained |
-| `candidate`  | Any authenticated user                         | Standard authenticated access                 |
-| `public`     | Unauthenticated                                | Published job listings, landing pages         |
+| `candidate`  | Any authenticated user                          | Standard authenticated access                                                              |
+| `public`     | Unauthenticated                                 | Published job listings, landing pages                                                      |
 
 ### Employer Access Matrix
 
@@ -266,26 +266,36 @@ Available guards: `withAuth`, `withRole`, `withVerifiedEmployer`, `withAdmin`, `
 ### Server Action Return Type
 
 ```typescript
-type ActionResult<T> =
-  | { success: true; data: T }
-  | {
-      success: false;
-      error: {
-        statusCode: number;
-        code: string;
-        message: string;
-        details?: Record<string, unknown>;
-      };
-    };
+type ActionError = {
+  message: string;
+  code: ErrorStatusCodeName;
+  statusCode: number;
+};
+
+type ActionStateSuccess<TSchema extends StandardSchemaV1, TData> = {
+  success: true;
+  formState: ServerFormState<StandardSchemaV1.InferOutput<TSchema>, TSchema>;
+  data: TData;
+};
+
+type ActionStateError<TSchema extends StandardSchemaV1> = {
+  success: false;
+  formState: ServerFormState<StandardSchemaV1.InferOutput<TSchema>, TSchema>;
+  error: ActionError;
+};
+
+type ActionState<TSchema extends StandardSchemaV1, TData> =
+  | ActionStateSuccess<TSchema, TData>
+  | ActionStateError<TSchema>;
 ```
 
 ### Error Codes
 
-`AUTH_REQUIRED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `QUOTA_EXCEEDED`, `RATE_LIMITED`, `CONFLICT`, `PAYMENT_REQUIRED`, `INTERNAL_ERROR`
+See `src/internals/exceptions.ts` for the full list of error codes and their meanings. Common ones include: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `TOO_MANY_REQUESTS`, `UNPROCESSABLE_ENTITY`, `INTERNAL_SERVER_ERROR`.
 
 ### API Route Status Codes
 
-200 success, 400 validation, 401 unauthenticated, 403 forbidden, 404 not found, 409 conflict, 429 rate limited (+ Retry-After), 500 internal
+200 success, 201 created, 400 validation, 401 unauthenticated, 403 forbidden, 404 not found, 409 conflict, 429 rate limited (+ Retry-After), 500 internal
 
 ---
 
