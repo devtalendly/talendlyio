@@ -6,21 +6,45 @@ import type {
 } from './status-codes';
 import { StatusCodes, getReasonPhrase } from './status-codes';
 
+type ErrorStatusCodeName = Exclude<
+  StatusCodeName,
+  | 'CONTINUE'
+  | 'SWITCHING_PROTOCOLS'
+  | 'PROCESSING'
+  | 'EARLY_HINTS'
+  | 'OK'
+  | 'CREATED'
+  | 'ACCEPTED'
+  | 'NON_AUTHORITATIVE_INFORMATION'
+  | 'NO_CONTENT'
+  | 'RESET_CONTENT'
+  | 'PARTIAL_CONTENT'
+  | 'MULTI_STATUS'
+  | 'MULTIPLE_CHOICES'
+  | 'MOVED_PERMANENTLY'
+  | 'MOVED_TEMPORARILY'
+  | 'SEE_OTHER'
+  | 'NOT_MODIFIED'
+  | 'USE_PROXY'
+  | 'TEMPORARY_REDIRECT'
+  | 'PERMANENT_REDIRECT'
+>;
+
 /** The default message literal for a given error code */
-type DefaultMessage<C extends StatusCodeName> = PhraseForCode<C>;
+type DefaultMessage<C extends ErrorStatusCodeName> = PhraseForCode<C>;
 
 /** The HTTP status literal for a given error code */
-type ErrorStatus<C extends StatusCodeName> = StatusForCode<C>;
+type ErrorStatus<C extends ErrorStatusCodeName> = StatusForCode<C>;
 
 /** The HTTP reason phrase literal for a given error code (derived from its status) */
-type ErrorPhrase<C extends StatusCodeName> = PhraseForCode<C>;
+type ErrorPhrase<C extends ErrorStatusCodeName> = PhraseForCode<C>;
 
-export type { DefaultMessage, ErrorPhrase, ErrorStatus };
+export type { DefaultMessage, ErrorPhrase, ErrorStatus, ErrorStatusCodeName };
 
 export interface SerializedException {
   name: string;
   message: string;
-  code: StatusCodeName;
+  code: ErrorStatusCodeName;
   statusCode: StatusCode;
   isOperational: boolean;
   context?: Record<string, unknown>;
@@ -28,7 +52,7 @@ export interface SerializedException {
   stack?: string;
 }
 
-interface AppExceptionOptions<C extends StatusCodeName> {
+interface AppExceptionOptions<C extends ErrorStatusCodeName> {
   /** Override the default message for this error code */
   message?: string | undefined;
   isOperational?: boolean | undefined;
@@ -41,7 +65,7 @@ interface AppExceptionOptions<C extends StatusCodeName> {
 }
 
 export class AppException<
-  Code extends StatusCodeName = StatusCodeName,
+  Code extends ErrorStatusCodeName = ErrorStatusCodeName,
 > extends Error {
   /** Machine-readable error code (e.g. 'ENTITY_NOT_FOUND') */
   readonly code: Code;
@@ -115,13 +139,24 @@ export class AppException<
     return json;
   }
 
+  toObject() {
+    return {
+      code: this.code,
+      statusCode: this.statusCode as number,
+      message: this.message,
+      ...(Object.keys(this.context).length > 0
+        ? { context: this.context }
+        : {}),
+    };
+  }
+
   /** Type guard usable anywhere: `if (AppError.is(err)) { ... }` */
   static is(value: unknown): value is AppException {
     return value instanceof AppException;
   }
 }
 
-type InheritedExceptionOptions<Code extends StatusCodeName> = Omit<
+type InheritedExceptionOptions<Code extends ErrorStatusCodeName> = Omit<
   AppExceptionOptions<Code>,
   '_statusOverride' | 'message'
 >;
@@ -140,7 +175,7 @@ export class NotFoundException extends AppException<'NOT_FOUND'> {
 
 export class BadRequestException extends AppException<'BAD_REQUEST'> {
   constructor(
-    message: string,
+    message?: string,
     options: InheritedExceptionOptions<'BAD_REQUEST'> = {},
   ) {
     super('BAD_REQUEST', {
@@ -152,7 +187,7 @@ export class BadRequestException extends AppException<'BAD_REQUEST'> {
 
 export class UnauthorizedException extends AppException<'UNAUTHORIZED'> {
   constructor(
-    message: string,
+    message?: string,
     options: InheritedExceptionOptions<'UNAUTHORIZED'> = {},
   ) {
     super('UNAUTHORIZED', {
@@ -164,7 +199,7 @@ export class UnauthorizedException extends AppException<'UNAUTHORIZED'> {
 
 export class ForbiddenException extends AppException<'FORBIDDEN'> {
   constructor(
-    message: string,
+    message?: string,
     options: InheritedExceptionOptions<'FORBIDDEN'> = {},
   ) {
     super('FORBIDDEN', {
@@ -188,7 +223,7 @@ export class ConflictException extends AppException<'CONFLICT'> {
 
 export class TooManyRequestsException extends AppException<'TOO_MANY_REQUESTS'> {
   constructor(
-    message: string,
+    message?: string,
     options: InheritedExceptionOptions<'TOO_MANY_REQUESTS'> = {},
   ) {
     super('TOO_MANY_REQUESTS', {
@@ -200,7 +235,7 @@ export class TooManyRequestsException extends AppException<'TOO_MANY_REQUESTS'> 
 
 export class InternalServerErrorException extends AppException<'INTERNAL_SERVER_ERROR'> {
   constructor(
-    message: string,
+    message?: string,
     options: InheritedExceptionOptions<'INTERNAL_SERVER_ERROR'> = {},
   ) {
     super('INTERNAL_SERVER_ERROR', {
@@ -211,31 +246,39 @@ export class InternalServerErrorException extends AppException<'INTERNAL_SERVER_
   }
 }
 
-export function createException<Code extends StatusCodeName>(
+function createException<Code extends ErrorStatusCodeName>(
   code: Code,
   message?: string,
   options: Omit<AppExceptionOptions<Code>, 'message'> = {},
 ): AppException<Code> {
-  return new AppException(code, { ...options, message });
+  return new AppException<Code>(code, { ...options, message });
 }
+
+createException.BadRequest = BadRequestException;
+createException.Unauthorized = UnauthorizedException;
+createException.Forbidden = ForbiddenException;
+createException.NotFound = NotFoundException;
+createException.Conflict = ConflictException;
+createException.TooManyRequests = TooManyRequestsException;
+createException.InternalServerError = InternalServerErrorException;
 
 /**
  * Normalise any thrown value into an AppError.
  * Unknown / non-Error throws become non-operational internal errors.
  */
-export function normalizeError(thrown: unknown): AppException {
+function normalizeError(thrown: unknown): AppException {
   if (AppException.is(thrown)) return thrown;
 
   if (thrown instanceof Error) {
-    return new AppException('INTERNAL_SERVER_ERROR', {
-      message: thrown.message,
-      isOperational: false,
+    return new createException.InternalServerError(thrown.message, {
       cause: thrown,
-    }) as AppException;
+      isOperational: false,
+    });
   }
 
-  return new AppException('INTERNAL_SERVER_ERROR', {
-    message: String(thrown),
+  return new createException.InternalServerError(String(thrown), {
     isOperational: false,
-  }) as AppException;
+  });
 }
+
+export { createException, normalizeError };

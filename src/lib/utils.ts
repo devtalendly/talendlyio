@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 import { env } from '@/config/env';
+import type { Prettify } from './types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -39,4 +40,28 @@ export function getURL(path: string = '') {
 
   const fullURL = new URL(path, url).toString();
   return fullURL.endsWith('/') ? fullURL.slice(0, -1) : fullURL;
+}
+
+export function pick<T extends object, K extends keyof T>(
+  obj: T,
+  keys: K[],
+): Prettify<Pick<T, K>> {
+  const result = {} as Pick<T, K>;
+  keys.forEach((key) => {
+    if (key in obj) {
+      result[key] = obj[key];
+    }
+  });
+  return result;
+}
+
+export function omit<T extends object, K extends keyof T>(
+  obj: T,
+  keys: K[],
+): Prettify<Omit<T, K>> {
+  const result = { ...obj };
+  keys.forEach((key) => {
+    delete result[key];
+  });
+  return result as Omit<T, K>;
 }
