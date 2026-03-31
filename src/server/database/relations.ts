@@ -7,7 +7,6 @@ import {
   organizations,
   sessions,
   users,
-  userProfiles,
   verifications,
 } from './schema';
 
@@ -20,7 +19,6 @@ export const relations = defineRelations(
     members,
     invitations,
     verifications,
-    userProfiles,
   },
   (r) => ({
     users: {
@@ -28,16 +26,6 @@ export const relations = defineRelations(
       accounts: r.many.accounts(),
       members: r.many.members(),
       invitations: r.many.invitations(),
-      userProfile: r.one.userProfiles({
-        from: r.users.id,
-        to: r.userProfiles.userId,
-      }),
-    },
-    userProfiles: {
-      user: r.one.users({
-        from: r.userProfiles.userId,
-        to: r.users.id,
-      }),
     },
     sessions: {
       users: r.one.users({

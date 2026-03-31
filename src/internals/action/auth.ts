@@ -2,7 +2,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import { createException } from '@/internals/exceptions';
 import type { AuthUser } from '@/lib/auth';
-import { currentUser } from '@/modules/auth/session';
+import { currentUser } from '@/modules/auth/lib/session';
 import { createServerAction } from './index';
 
 type AuthenticatedHandlerFn<TSchema extends StandardSchemaV1, TOutput> = (

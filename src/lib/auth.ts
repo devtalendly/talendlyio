@@ -5,8 +5,6 @@ import { emailOTP, organization, admin } from 'better-auth/plugins';
 
 import { db } from '@/lib/db';
 import * as schema from '@/server/database/schema';
-import { runWithDatabase } from '@/server/async-hooks/db';
-import { createUserProfile } from '@/modules/users/services/user-profile.service';
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -14,6 +12,34 @@ export const auth = betterAuth({
     schema,
     usePlural: true,
   }),
+  user: {
+    additionalFields: {
+      locale: {
+        type: 'string',
+        default: 'en',
+        input: false,
+        required: true,
+      },
+      isActive: {
+        type: 'boolean',
+        default: true,
+        input: false,
+        required: true,
+      },
+      lastLoginAt: {
+        type: 'date',
+        default: null,
+        input: false,
+        required: false,
+      },
+      onboardingCompleted: {
+        type: 'boolean',
+        default: false,
+        input: false,
+        required: true,
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
@@ -43,15 +69,6 @@ export const auth = betterAuth({
     organization(),
     nextCookies(),
   ],
-  databaseHooks: {
-    user: {
-      create: {
-        after: async (user) => {
-          await runWithDatabase(db, () => createUserProfile(user.id));
-        },
-      },
-    },
-  },
   advanced: {
     database: {
       generateId: false,

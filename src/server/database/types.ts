@@ -4,7 +4,6 @@ import {
   members,
   organizations,
   sessions,
-  userProfiles,
   users,
   verifications,
 } from './schema';
@@ -23,9 +22,6 @@ export type OrganizationInsert = typeof organizations.$inferInsert;
 
 export type Session = typeof sessions.$inferSelect;
 export type SessionInsert = typeof sessions.$inferInsert;
-
-export type UserProfile = typeof userProfiles.$inferSelect;
-export type UserProfileInsert = typeof userProfiles.$inferInsert;
 
 export type User = typeof users.$inferSelect;
 export type UserInsert = typeof users.$inferInsert;

@@ -1,12 +1,15 @@
 import {
   boolean,
   index,
+  pgEnum,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+
+export const localeEnum = pgEnum('locale', ['el', 'en']);
 
 export const users = pgTable(
   'users',
@@ -20,6 +23,11 @@ export const users = pgTable(
     banned: boolean('banned').default(false),
     banReason: text('ban_reason'),
     banExpires: timestamp('ban_expires'),
+    // Platform fields
+    locale: localeEnum('locale').notNull().default('en'),
+    isActive: boolean('is_active').notNull().default(true),
+    lastLoginAt: timestamp('last_login_at'),
+    onboardingCompleted: boolean('onboarding_completed').notNull().default(false),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()

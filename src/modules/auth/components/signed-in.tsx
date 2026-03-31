@@ -1,4 +1,4 @@
-import { isAuthenticated } from '@/modules/auth/session';
+import { isAuthenticated } from '@/modules/auth/lib/session';
 
 export async function SignedIn({ children }: { children: React.ReactNode }) {
   const authenticated = await isAuthenticated();

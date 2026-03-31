@@ -1,6 +1,6 @@
 import { createException } from '@/internals/exceptions';
 import type { AuthUser } from '@/lib/auth';
-import { currentUser } from '@/modules/auth/session';
+import { currentUser } from '@/modules/auth/lib/session';
 import { createRouteHandler } from './index';
 import type { HandlerInput, HttpMethod, RouteSchema } from './types';
 
@@ -8,7 +8,9 @@ type AuthenticatedHandlerFn<
   M extends HttpMethod,
   TSchema extends RouteSchema<M>,
   TOutput,
-> = (input: HandlerInput<TSchema> & { ctx: { user: AuthUser } }) => Promise<TOutput>;
+> = (
+  input: HandlerInput<TSchema> & { ctx: { user: AuthUser } },
+) => Promise<TOutput>;
 
 class AuthenticatedRouteHandlerBuilderWithSchema<
   M extends HttpMethod,
@@ -50,9 +52,7 @@ class AuthenticatedRouteHandlerBuilderWithMethod<M extends HttpMethod> {
     return new AuthenticatedRouteHandlerBuilderWithSchema(this.#method, schema);
   }
 
-  handler<TOutput>(
-    fn: AuthenticatedHandlerFn<M, RouteSchema<M>, TOutput>,
-  ) {
+  handler<TOutput>(fn: AuthenticatedHandlerFn<M, RouteSchema<M>, TOutput>) {
     return createRouteHandler()
       .method(this.#method)
       .handler(async (input) => {
