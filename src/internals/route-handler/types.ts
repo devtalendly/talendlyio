@@ -35,17 +35,6 @@ type HandlerInput<TSchema extends RouteSchema<HttpMethod>> = {
   request: NextRequest;
 };
 
-type RouteHandlerOptions<
-  M extends HttpMethod,
-  TSchema extends RouteSchema<M>,
-  TOutput,
-> = {
-  method: M;
-  successStatus?: number;
-  schema?: TSchema;
-  handler: (input: HandlerInput<TSchema>) => Promise<TOutput>;
-};
-
 type NextRouteContext = {
   params: Promise<Record<string, string | string[]>>;
 };
@@ -61,7 +50,6 @@ export type {
   RouteSchema,
   InferOutput,
   HandlerInput,
-  RouteHandlerOptions,
   NextRouteContext,
   NextRouteHandler,
 };

@@ -32,10 +32,13 @@ Read the following guidelines carefully before writing any code. This document c
 
 ## Architecture Conventions
 
-- **Server Actions** for all internal mutations and queries.
-- **API Routes (`/api/*`)** only for: Better Auth catch-all, Stripe webhooks, Resend webhooks, OG image generation, health check, sitemap.
+- **Server Actions** for all internal mutations.
+- **API Routes (`/api/*`)** only for: Better Auth catch-all, Stripe webhooks, Resend webhooks, OG image generation, health check, sitemap, and queries that need to be fetched from the client.
 - All tables use **UUID v4** primary keys, `created_at`/`updated_at` timestamps, and soft-delete (`deleted_at`) where noted.
 - Drizzle schema files organized per domain under `src/server/database/schema/`.
+- Server actions and route handlers should be created using the provided `createServerAction` and `createRouteHandler` wrappers respectively for consistent error handling and return types, unless the requirements of the action or endpoint dictate otherwise (e.g. Stripe webhooks must use raw body parsing).
+- Server actions and route handlers should utilize the async hooks-based database context for automatic connection management and transaction scoping. See `src/server/async-hooks/db.ts` for details.
+- Database access should be handled through `getDatabaseFromContext` when wrapped within `runWithDatabase` or `runWithTransaction`, never imported directly. This ensures proper connection management and transaction scoping.
 
 ---
 

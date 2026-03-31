@@ -2,45 +2,78 @@ import { createException } from '@/internals/exceptions';
 import type { AuthUser } from '@/lib/auth';
 import { currentUser } from '@/modules/auth/session';
 import { createRouteHandler } from './index';
-import type {
-  HandlerInput,
-  HttpMethod,
-  RouteHandlerOptions,
-  RouteSchema,
-} from './types';
+import type { HandlerInput, HttpMethod, RouteSchema } from './types';
 
 type AuthenticatedHandlerFn<
   M extends HttpMethod,
   TSchema extends RouteSchema<M>,
   TOutput,
-> = (
-  payload: HandlerInput<TSchema> & {
-    ctx: { user: AuthUser };
-  },
-) => Promise<TOutput>;
+> = (input: HandlerInput<TSchema> & { ctx: { user: AuthUser } }) => Promise<TOutput>;
 
-type AuthenticatedActionOptions<
+class AuthenticatedRouteHandlerBuilderWithSchema<
   M extends HttpMethod,
   TSchema extends RouteSchema<M>,
-  TOutput,
-> = Omit<RouteHandlerOptions<M, TSchema, TOutput>, 'handler'> & {
-  handler: AuthenticatedHandlerFn<M, TSchema, TOutput>;
-};
+> {
+  readonly #method: M;
+  readonly #schema: TSchema;
 
-export function authenticatedRouteHandler<
-  M extends HttpMethod,
-  TSchema extends RouteSchema<M> = RouteSchema<M>,
-  TOutput = void,
->(options: AuthenticatedActionOptions<M, TSchema, TOutput>) {
-  return createRouteHandler<M, TSchema, TOutput>({
-    ...options,
-    handler: async (payload) => {
-      const user = await currentUser();
-      if (!user) {
-        throw new createException.Unauthorized();
-      }
+  constructor(method: M, schema: TSchema) {
+    this.#method = method;
+    this.#schema = schema;
+  }
 
-      return options.handler({ ...payload, ctx: { user } });
-    },
-  });
+  handler<TOutput>(fn: AuthenticatedHandlerFn<M, TSchema, TOutput>) {
+    return createRouteHandler()
+      .method(this.#method)
+      .schema(this.#schema)
+      .handler(async (input) => {
+        const user = await currentUser();
+        if (!user) {
+          throw new createException.Unauthorized();
+        }
+
+        return fn({ ...input, ctx: { user } });
+      });
+  }
+}
+
+class AuthenticatedRouteHandlerBuilderWithMethod<M extends HttpMethod> {
+  readonly #method: M;
+
+  constructor(method: M) {
+    this.#method = method;
+  }
+
+  schema<TSchema extends RouteSchema<M>>(
+    schema: TSchema,
+  ): AuthenticatedRouteHandlerBuilderWithSchema<M, TSchema> {
+    return new AuthenticatedRouteHandlerBuilderWithSchema(this.#method, schema);
+  }
+
+  handler<TOutput>(
+    fn: AuthenticatedHandlerFn<M, RouteSchema<M>, TOutput>,
+  ) {
+    return createRouteHandler()
+      .method(this.#method)
+      .handler(async (input) => {
+        const user = await currentUser();
+        if (!user) {
+          throw new createException.Unauthorized();
+        }
+
+        return fn({ ...input, ctx: { user } });
+      });
+  }
+}
+
+class AuthenticatedRouteHandlerBuilder {
+  method<M extends HttpMethod>(
+    method: M,
+  ): AuthenticatedRouteHandlerBuilderWithMethod<M> {
+    return new AuthenticatedRouteHandlerBuilderWithMethod(method);
+  }
+}
+
+export function authenticatedRouteHandler(): AuthenticatedRouteHandlerBuilder {
+  return new AuthenticatedRouteHandlerBuilder();
 }

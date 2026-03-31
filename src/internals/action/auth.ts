@@ -3,37 +3,38 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { createException } from '@/internals/exceptions';
 import type { AuthUser } from '@/lib/auth';
 import { currentUser } from '@/modules/auth/session';
-import { createAction } from './index';
-import type { ActionOptions, ActionType } from './types';
+import { createServerAction } from './index';
 
 type AuthenticatedHandlerFn<TSchema extends StandardSchemaV1, TOutput> = (
   payload: StandardSchemaV1.InferOutput<TSchema>,
   ctx: { user: AuthUser },
 ) => Promise<TOutput>;
 
-type AuthenticatedActionOptions<
-  TSchema extends StandardSchemaV1,
-  AT extends ActionType,
-  TOutput,
-> = Omit<ActionOptions<TSchema, AT, TOutput>, 'handler'> & {
-  handler: AuthenticatedHandlerFn<TSchema, TOutput>;
-};
+class AuthenticatedActionBuilderWithSchema<TSchema extends StandardSchemaV1> {
+  constructor(private readonly schema: TSchema) {}
 
-export function authenticatedAction<
-  TSchema extends StandardSchemaV1,
-  AT extends ActionType = 'default',
-  TOutput = void,
->(options: AuthenticatedActionOptions<TSchema, AT, TOutput>) {
-  return createAction<TSchema, AT, TOutput>({
-    ...options,
-    type: options.type ?? ('default' as AT),
-    handler: async (payload) => {
-      const user = await currentUser();
-      if (!user) {
-        throw new createException.Unauthorized();
-      }
+  handler<TOutput>(fn: AuthenticatedHandlerFn<TSchema, TOutput>) {
+    return createServerAction()
+      .input(this.schema)
+      .handler(async (payload) => {
+        const user = await currentUser();
+        if (!user) {
+          throw new createException.Unauthorized();
+        }
 
-      return options.handler(payload, { user });
-    },
-  });
+        return fn(payload, { user });
+      });
+  }
+}
+
+class AuthenticatedActionBuilder {
+  input<TSchema extends StandardSchemaV1>(
+    schema: TSchema,
+  ): AuthenticatedActionBuilderWithSchema<TSchema> {
+    return new AuthenticatedActionBuilderWithSchema(schema);
+  }
+}
+
+export function authenticatedAction(): AuthenticatedActionBuilder {
+  return new AuthenticatedActionBuilder();
 }

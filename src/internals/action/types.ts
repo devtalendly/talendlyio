@@ -9,18 +9,6 @@ type ActionError = {
   statusCode: number;
 };
 
-type ActionType = 'default' | 'form-action' | 'state-action';
-
-type ActionOptions<
-  TSchema extends StandardSchemaV1,
-  AT extends ActionType,
-  TOutput,
-> = {
-  schema: TSchema;
-  handler: (payload: StandardSchemaV1.InferOutput<TSchema>) => Promise<TOutput>;
-  type?: AT;
-};
-
 type ActionStateSuccess<TSchema extends StandardSchemaV1, TData> = {
   success: true;
   formState: ServerFormState<StandardSchemaV1.InferOutput<TSchema>, TSchema>;
@@ -50,23 +38,12 @@ type StateActionFn<TSchema extends StandardSchemaV1, TOutput> = (
   formData: FormData,
 ) => Promise<ActionState<TSchema, TOutput>>;
 
-type ActionFnByType<
-  TSchema extends StandardSchemaV1,
-  AT extends ActionType = 'default',
-  TOutput = void,
-> = AT extends 'default'
-  ? DefaultActionFn<TSchema, TOutput>
-  : AT extends 'form-action'
-    ? FormActionFn<TSchema, TOutput>
-    : StateActionFn<TSchema, TOutput>;
-
 export type {
   ActionError,
-  ActionOptions,
   ActionState,
+  ActionStateSuccess,
+  ActionStateError,
   DefaultActionFn,
   FormActionFn,
   StateActionFn,
-  ActionFnByType,
-  ActionType,
 };
